@@ -60,3 +60,6 @@ dmypy.log
 *.tmp
 *.swp
 *.swo
+
+#Google Cloud Service Account Credentials
+edutube-453506-eded5f992512.json

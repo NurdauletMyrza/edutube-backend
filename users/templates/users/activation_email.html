@@ -1,9 +1,4 @@
-<!DOCTYPE html>
-<html>
-<body>
-    <p>Hi {{ user.first_name }},</p>
-    <p>Thank you for registering. Click the link below to activate your account:</p>
-    <p><a href="{{ activation_url }}">Activate Account</a></p>
-    <p>If you didn't register with us, please ignore this email.</p>
-</body>
-</html>
+Hi {{ user.first_name }},
+Thank you for registering. Click the link below to activate your account:
+{{ activation_url }} Activate Account
+If you didn't register with us, you can cancel registration in this link.

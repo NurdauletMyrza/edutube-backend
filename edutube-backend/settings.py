@@ -29,40 +29,34 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-# Настройки JWT
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # Время жизни access-токена
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),  # Время жизни refresh-токена
-    'ROTATE_REFRESH_TOKENS': True,  # Ротация refresh-токенов
-    'BLACKLIST_AFTER_ROTATION': True,  # Поддержка "черного списка" токенов
-    'AUTH_HEADER_TYPES': ('Bearer',),  # Префикс для токена
-}
-
-REST_FRAMEWORK = {
-    # Подключение Simple JWT как бэкенда авторизации
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-}
-
 # Application definition
 
 INSTALLED_APPS = [
+    # Другие встроенные приложения Django
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
+
+    # Сторонние библиотеки
+    'corsheaders',
+    'rest_framework',  # Django REST Framework
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',  # Simple JWT для работы с blacklisting
+
+    # Мои приложения
     'users',
+    'courses',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',    # CSRF защита
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -99,8 +93,6 @@ DATABASES = {
     }
 }
 
-AUTH_USER_MODEL = 'users.User'
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -118,6 +110,15 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+]
+
+# Password hashing
+
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
 
 
@@ -138,10 +139,52 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+REST_FRAMEWORK = {
+    # Подключение Simple JWT как бэкенда авторизации
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'registration': '10/hour',  # Максимум 3 запроса в час
+        'email_check': '10/min',  # Максимум 10 запросов в минуту
+        'login': '10/min',  # Логин остаётся на 5 запросов в минуту
+    }
+}
+
+# Настройки JWT
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30), # не меньше 5 мин, если менять то на фронте тоже лучше поменять maxAge для access cookie
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1), # если менять то на фронте тоже лучше поменять maxAge для refresh cookie
+    "ROTATE_REFRESH_TOKENS": True,  # false: refresh_token не меняется true:Генерируем новый refresh при обновлении
+    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    # "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    # 'COOKIE_SECURE': False,  # Включи True для HTTPS
+    # 'COOKIE_HTTP_ONLY': True,
+    "AUTH_COOKIE": "access",  # Имя access token cookie
+    "AUTH_COOKIE_REFRESH": "refresh",  # Имя refresh token cookie
+    # "AUTH_COOKIE_HTTP_ONLY": True,
+    # "AUTH_COOKIE_SAMESITE": "Lax",
+    # "AUTH_COOKIE_SECURE": True,  # Только HTTPS в продакшене!
+}
+
+FRONTEND_URL = "http://localhost:3000"  # В проде изменить
+
+CORS_ALLOW_CREDENTIALS = True  # Позволяем передавать cookie
+CORS_ALLOWED_ORIGINS = [FRONTEND_URL]  # ✅ Разрешаем фронт (замени на свой)
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+# SESSION_COOKIE_SECURE = False  # Включить True для HTTPS❗ Должно быть True в продакшене
+# CSRF_COOKIE_SECURE = False  # Включить True для HTTPS
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AUTH_USER_MODEL = 'users.User'
 
 # Email configurations
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -150,4 +193,4 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = '180103227@stu.sdu.edu.kz'  # Ваш email-адрес
 EMAIL_HOST_PASSWORD = 'egxficiofpjhiezx'  # Ваш пароль (или приложеный пароль для SMTP)
-DEFAULT_FROM_EMAIL = 'askar.nurdaulet1027@gmail.com'  # Email отправителя
+DEFAULT_FROM_EMAIL = 'EduTube2025@edutube.com'  # Email отправителя
