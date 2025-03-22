@@ -1,3 +1,5 @@
+import os
+
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import generics, status
@@ -143,7 +145,7 @@ class CancelActivateDeleteUserView(APIView):
             try:
                 first_name = user.first_name
                 user.delete()  # Удаляет пользователя из базы
-                send_message_email(user_first_name=first_name, user_email=email, subject="Account deleted", message="Your account has been deleted successfully. If you want to register go by link below. We hope to see you again soon.", url_link=f"{settings.FRONTEND_URL}/auth/register" )
+                send_message_email(user_first_name=first_name, user_email=email, subject="Account deleted", message="Your account has been deleted successfully. If you want to register go by link below. We hope to see you again soon.", url_link=f"{os.getenv('FRONTEND_URL')}/auth/register" )
 
                 return Response({"success": "Account successfully deleted."}, status=status.HTTP_200_OK)
             except Exception as e:
@@ -185,7 +187,7 @@ class ActivateUserView(APIView):
                 # Активировать пользователя
                 user.is_active = True
                 user.save()
-                send_message_email(user_first_name=user.first_name, user_email=user.email, subject="Account activated", message="Your account has been activated successfully. Thank you for your patience. You can go to login by this link.", url_link=f"{settings.FRONTEND_URL}/auth/login")
+                send_message_email(user_first_name=user.first_name, user_email=user.email, subject="Account activated", message="Your account has been activated successfully. Thank you for your patience. You can go to login by this link.", url_link=f"{os.getenv('FRONTEND_URL')}/auth/login")
 
                 return Response({"success": "Account activated successfully."}, status=status.HTTP_200_OK)
             else:
