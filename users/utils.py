@@ -1,3 +1,5 @@
+import os
+
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_encode
@@ -45,7 +47,7 @@ def send_activation_email(user, subject="Activate Your Account"):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
 
     # Prepare activation URL
-    activation_url = f"{settings.FRONTEND_URL}/auth/activate/{uid}/{token}/"
+    activation_url = f"{os.getenv('FRONTEND_URL')}/auth/activate/{uid}/{token}/"
 
     # Send activation email
     message_html = render_to_string("users/activation_email.html", {
