@@ -178,6 +178,7 @@ SIMPLE_JWT = {
     # "AUTH_COOKIE_SECURE": True,  # Только HTTPS в продакшене!
 }
 
+CORS_ORIGIN_ALLOW_ALL = DEBUG
 CORS_ALLOW_CREDENTIALS = True  # Позволяем передавать cookie
 CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000 http://127.0.0.1:8000").split()     # ✅ Разрешаем фронт (замени на свой)
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
