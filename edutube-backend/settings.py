@@ -31,7 +31,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-secret-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1 localhost").split()
 
 # Application definition
 
@@ -179,7 +179,7 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOW_CREDENTIALS = True  # Позволяем передавать cookie
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:8000").split(',')     # ✅ Разрешаем фронт (замени на свой)
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000 http://127.0.0.1:8000").split()     # ✅ Разрешаем фронт (замени на свой)
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 SESSION_COOKIE_SECURE = not DEBUG  # Включить True для HTTPS❗ Должно быть True в продакшене
 CSRF_COOKIE_SECURE = not DEBUG  # Включить True для HTTPS
