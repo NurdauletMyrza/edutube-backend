@@ -1,16 +1,12 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import CourseViewSet, EnrollmentViewSet, TopicViewSet, CourseFileViewSet, UploadFileView
-
-router = DefaultRouter()
-router.register(r'courses', CourseViewSet)
-router.register(r'enrollments', EnrollmentViewSet)
-router.register(r'topics', TopicViewSet)
-router.register(r'files', CourseFileViewSet)
+from django.urls import path
+from .views import CourseCreateView, CourseDetailView, AllCoursesView, UserCreatedCoursesView
 
 urlpatterns = [
-    path('', include(router.urls)),
-]
-urlpatterns += [
-    path('upload-file/', UploadFileView.as_view(), name='upload_file'),
+    path('course/create/', CourseCreateView.as_view(), name='course-create'),
+    path('course/<int:pk>/', CourseDetailView.as_view(), name='course-detail'),
+    path('all/', AllCoursesView.as_view(), name='all-courses'),
+    path('user-created/', UserCreatedCoursesView.as_view(), name='user-created'),
+
+    # path('courses/', CourseListCreateView.as_view(), name='course-list-create'),
+    # path('courses/<int:pk>/', CourseDetailView.as_view(), name='course-detail'),
 ]
