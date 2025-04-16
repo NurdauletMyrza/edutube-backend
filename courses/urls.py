@@ -3,7 +3,7 @@ from .views import CourseCreateView, CourseDetailView, AllCoursesView, UserCreat
 
 urlpatterns = [
     path('course/create/', CourseCreateView.as_view(), name='course-create'),
-    path('course/<int:pk>/', CourseDetailView.as_view(), name='course-detail'),
+    path('course/<int:id>/', CourseDetailView.as_view(), name='course-detail'),
     path('all/', AllCoursesView.as_view(), name='all-courses'),
     path('user-created/', UserCreatedCoursesView.as_view(), name='user-created'),
 
