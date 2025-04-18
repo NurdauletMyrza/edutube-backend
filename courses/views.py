@@ -1,24 +1,31 @@
 from rest_framework import generics
-from .models import Course
-from .serializers import CourseSerializer
+from .models import Course, Module, Lesson
+from .serializers import CourseSerializer, ModuleSerializer, LessonSerializer, CourseDetailSerializer
 from rest_framework.permissions import AllowAny
 
 
 class CourseCreateView(generics.CreateAPIView):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
-    # permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
         # Автоматически ставим текущего пользователя как автора
         serializer.save(author=self.request.user)
 
 
+# class CourseDetailView(generics.RetrieveAPIView):
+#     queryset = Course.objects.all()
+#     serializer_class = CourseSerializer
+#     permission_classes = [AllowAny]
+#     lookup_field = 'id'
+
+
 class CourseDetailView(generics.RetrieveAPIView):
     queryset = Course.objects.all()
-    serializer_class = CourseSerializer
+    serializer_class = CourseDetailSerializer
+    lookup_field = 'id'
     permission_classes = [AllowAny]
-    lookup_field = 'id'  # говорим DRF искать по id
+
 
 
 class AllCoursesView(generics.ListAPIView):
@@ -32,6 +39,16 @@ class UserCreatedCoursesView(generics.ListAPIView):
 
     def get_queryset(self):
         return Course.objects.filter(author=self.request.user)
+
+
+class ModuleCreateView(generics.CreateAPIView):
+    queryset = Module.objects.all()
+    serializer_class = ModuleSerializer
+
+
+class LessonCreateView(generics.CreateAPIView):
+    queryset = Lesson.objects.all()
+    serializer_class = LessonSerializer
 
 
 # # 🔹 Создание и просмотр всех курсов
