@@ -32,6 +32,17 @@ class Lesson(models.Model):
     def __str__(self):
         return f'{self.title} ({self.module.title})'
 
+
+class LessonFile(models.Model):
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='files')
+    file_id = models.CharField(max_length=255)
+    filename = models.CharField(max_length=255)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.filename
+
+
 # class LessonFile(models.Model):
 #     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='files')
 #     file_id = models.CharField(max_length=255)

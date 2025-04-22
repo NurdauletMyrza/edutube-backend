@@ -69,4 +69,4 @@ dmypy.log
 *.swo
 
 #Google Cloud Service Account Credentials
-edutube-453506-eded5f992512.json
+gdrive-credentials.json

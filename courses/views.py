@@ -1,15 +1,24 @@
 from rest_framework.generics import RetrieveAPIView, CreateAPIView, ListAPIView
-
-from .models import Course, Module, Lesson
-from .serializers import CourseSerializer, ModuleSerializer, LessonSerializer, CourseDetailSerializer, LessonDetailSerializer
 from rest_framework.permissions import AllowAny
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from googleapiclient.discovery import build
+from rest_framework import status
+
+from utils.google_drive_service import get_drive_service
+
+from .models import Course, Module, Lesson, LessonFile
+from .serializers import CourseSerializer, ModuleSerializer, LessonSerializer, CourseDetailSerializer, LessonDetailSerializer, LessonFileSerializer
+
+from google.auth.transport.requests import AuthorizedSession
 from googleapiclient.http import MediaIoBaseUpload
-# from oauth2client.service_account import ServiceAccountCredentials
-import io
+from googleapiclient.http import HttpRequest
+from googleapiclient.errors import HttpError
+
+import os
+
+# from googleapiclient.discovery import build
+# from googleapiclient.http import MediaIoBaseUpload
+# import io
 
 
 class CourseCreateView(CreateAPIView):
@@ -64,47 +73,114 @@ class LessonDetailView(RetrieveAPIView):
     # permission_classes = [AllowAny]
 
 
-# class GoogleDriveUploadURLView(APIView):
-#     def post(self, request):
-#         file_name = request.data.get("filename")
-#         mime_type = request.data.get("mime_type", "application/octet-stream")
-#
-#         # аутентификация
-#         credentials = ServiceAccountCredentials.from_json_keyfile_name(
-#             'credentials.json',
-#             scopes=['https://www.googleapis.com/auth/drive']
-#         )
-#         service = build('drive', 'v3', credentials=credentials)
-#
-#         # создаём файл в Google Drive
-#         file_metadata = {'name': file_name}
-#         media = MediaIoBaseUpload(io.BytesIO(b""), mimetype=mime_type)
-#         file = service.files().create(body=file_metadata, media_body=media).execute()
-#
-#         return Response({
-#             'fileId': file.get('id'),
-#             'webViewLink': f"https://drive.google.com/file/d/{file.get('id')}/view"
-#         })
-#
-#
-# class SaveDriveFileView(CreateAPIView):
-#     queryset = LessonFile.objects.all()
-#     serializer_class = LessonFileSerializer
-#
-#
-# class DriveFileInfoView(APIView):
-#     def get(self, request, file_id):
-#         credentials = ServiceAccountCredentials.from_json_keyfile_name(
-#             'credentials.json',
-#             scopes=['https://www.googleapis.com/auth/drive']
-#         )
-#         service = build('drive', 'v3', credentials=credentials)
-#         file = service.files().get(fileId=file_id, fields='id, name, mimeType, webViewLink, webContentLink').execute()
-#
-#         return Response({
-#             'id': file['id'],
-#             'name': file['name'],
-#             'mimeType': file['mimeType'],
-#             'webViewLink': file['webViewLink'],
-#             'webContentLink': file.get('webContentLink')
-#         })
+class GetUploadURLView(APIView):
+    def post(self, request):
+        filename = request.data.get("filename")
+        mime_type = request.data.get("mime_type", "application/octet-stream")
+
+        service, credentials = get_drive_service()
+        authed_session = AuthorizedSession(credentials)
+
+        # Шаг 1: создаем файл (получаем fileId)
+        file_metadata = {
+            "name": filename,
+            "parents": [os.getenv('DRIVE_FOLDER_ID')],
+            "mimeType": mime_type,
+        }
+
+        metadata_response = service.files().create(
+            body=file_metadata,
+            fields="id"
+        ).execute()
+
+        file_id = metadata_response.get("id")
+
+        upload_url = f"https://www.googleapis.com/upload/drive/v3/files/{file_id}?uploadType=resumable"
+
+        headers = {
+            "Content-Type": "application/json; charset=UTF-8",
+            "X-Upload-Content-Type": mime_type,
+        }
+
+        # ⚠️ не включаем "parents" в тело запроса
+        session_response = authed_session.patch(
+            upload_url,
+            headers=headers,
+            json={"name": filename, "mimeType": mime_type}
+        )
+
+        # file_id = metadata_response.get("id")
+        #
+        # # Шаг 2: получаем upload_url для этого fileId
+        # upload_url = f"https://www.googleapis.com/upload/drive/v3/files/{file_id}?uploadType=resumable"
+        #
+        # headers = {
+        #     "Content-Type": "application/json; charset=UTF-8",
+        #     "X-Upload-Content-Type": mime_type,
+        # }
+        #
+        # session_response = authed_session.patch(
+        #     upload_url,
+        #     headers=headers,
+        #     json=file_metadata
+        # )
+
+        if session_response.status_code in [200, 201]:
+            return Response({
+                "fileId": file_id,
+                "upload_url": session_response.headers.get("Location")
+            })
+        else:
+            return Response({
+                "error": "Failed to create upload session",
+                "status_code": session_response.status_code,
+                "details": session_response.text
+            }, status=500)
+
+
+class SaveLessonFileView(APIView):
+    def post(self, request):
+        file_id = request.data.get("file_id")
+
+        # 1. Получаем информацию о файле с Google Drive
+        try:
+            service, credentials = get_drive_service()
+            file_info = service.files().get(fileId=file_id, fields="id, name, size").execute()
+        except HttpError as e:
+            return Response(
+                {"error": "File not found", "details": str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # 2. Проверяем размер файла
+        file_size = int(file_info.get("size", 0))
+        if file_size == 0:
+            return Response(
+                {"error": "File exist, but content empty (size 0 bites)"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 3. Сохраняем файл в базе данных
+        serializer = LessonFileSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"success": "File saved", "file": serializer.data})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LessonFilesListView(APIView):
+    def get(self, request, lesson_id):
+        files = LessonFile.objects.filter(lesson_id=lesson_id)
+        serializer = LessonFileSerializer(files, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class LessonFileDetailView(APIView):
+    def get(self, request, file_id):
+        service = get_drive_service()
+        file = service.files().get(fileId=file_id, fields="id, name, webViewLink").execute()
+        return Response({
+            "file_id": file["id"],
+            "filename": file["name"],
+            "webViewLink": file["webViewLink"]
+        })
