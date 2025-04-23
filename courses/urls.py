@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import CourseCreateView, CourseDetailView, AllCoursesView, UserCreatedCoursesView, ModuleCreateView, \
-    LessonCreateView, LessonDetailView, GetUploadURLView, SaveLessonFileView, LessonFileDetailView, LessonFilesListView
+    LessonCreateView, LessonDetailView, GetUploadURLView, SaveLessonFileView, DeleteLessonFileView, LessonFilesListView
 
 urlpatterns = [
     path('course/create/', CourseCreateView.as_view(), name='course-create'),
@@ -14,7 +14,7 @@ urlpatterns = [
     path("file/upload-url/", GetUploadURLView.as_view(), name="get-upload-url"),
     path("file/save-file/", SaveLessonFileView.as_view(), name="save-lesson-file"),
     path("files/get-lesson-files/<int:lesson_id>/", LessonFilesListView.as_view(), name="get-lesson-files"),
-    path("file/get/<str:file_id>/", LessonFileDetailView.as_view(), name="get-file-info"),
+    path("file/delete-lesson-file/<int:pk>/", DeleteLessonFileView.as_view(), name="delete-lesson-file"),
 
     # path('courses/', CourseListCreateView.as_view(), name='course-list-create'),
     # path('courses/<int:pk>/', CourseDetailView.as_view(), name='course-detail'),

@@ -41,11 +41,3 @@ class LessonFile(models.Model):
 
     def __str__(self):
         return self.filename
-
-
-# class LessonFile(models.Model):
-#     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='files')
-#     file_id = models.CharField(max_length=255)
-#     name = models.CharField(max_length=255)
-#     mime_type = models.CharField(max_length=100)
-#     created_at = models.DateTimeField(auto_now_add=True)

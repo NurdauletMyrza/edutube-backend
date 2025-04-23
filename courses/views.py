@@ -175,12 +175,28 @@ class LessonFilesListView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class LessonFileDetailView(APIView):
-    def get(self, request, file_id):
-        service = get_drive_service()
-        file = service.files().get(fileId=file_id, fields="id, name, webViewLink").execute()
-        return Response({
-            "file_id": file["id"],
-            "filename": file["name"],
-            "webViewLink": file["webViewLink"]
-        })
+class DeleteLessonFileView(APIView):
+    def delete(self, request, pk):
+        try:
+            lesson_file = LessonFile.objects.get(pk=pk)
+        except LessonFile.DoesNotExist:
+            return Response({"detail": "File not found in database"}, status=status.HTTP_404_NOT_FOUND)
+
+        file_id = lesson_file.file_id
+
+        # Удаляем из Google Drive
+        try:
+            service, _ = get_drive_service()
+            service.files().delete(fileId=file_id).execute()
+        except HttpError as e:
+            if e.resp.status == 404:
+                # Файл уже удален — не критично
+                pass
+            else:
+                return Response({"detail": f"Error Drive storage file delete action: {str(e)}"},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Удаляем из базы
+        lesson_file.delete()
+
+        return Response({"success": "File successfully removed from storage"}, status=status.HTTP_200_OK)
