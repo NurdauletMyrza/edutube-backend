@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     # Мои приложения
     'users',
     'courses',
+    'tests',
 ]
 
 MIDDLEWARE = [
