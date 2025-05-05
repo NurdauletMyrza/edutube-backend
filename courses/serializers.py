@@ -2,11 +2,13 @@ from rest_framework import serializers
 from .models import Course, Module, Lesson, LessonFile
 
 class CourseSerializer(serializers.ModelSerializer):
+    author_first_name = serializers.CharField(source='author.first_name', read_only=True)
+    author_last_name = serializers.CharField(source='author.last_name', read_only=True)
+
     class Meta:
         model = Course
         fields = '__all__'
         read_only_fields = ['author', 'created_at']
-
 
 class ModuleSerializer(serializers.ModelSerializer):
     class Meta:
