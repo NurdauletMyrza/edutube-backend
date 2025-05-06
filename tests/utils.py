@@ -17,7 +17,7 @@ from utils.google_drive_service import get_drive_service  # Импортируй
 
 load_dotenv()
 
-ffmpeg_path = os.getenv('FFMPEG_PATH')
+ffmpeg_path = os.getenv('FFMPEG_PATH', 'ffmpeg')
 openai_api_key = os.getenv("OPENAI_API_KEY")
 openai_url = "https://api.openai.com/v1/chat/completions"
 
