@@ -1,6 +1,8 @@
 import os
 import json
 import tempfile
+from threading import Thread
+
 import requests
 import subprocess
 from django.http import JsonResponse
@@ -17,19 +19,11 @@ from rest_framework import status
 from courses.models import Lesson, LessonFile
 from .models import Test, Question, Option
 from .serializers import TestSerializer
-from .utils import (
-    call_openai_api,
-    download_file_from_drive,
-    extract_audio,
-    transcribe_with_vosk
-)
+from .services import generate_test_content
 
-questions_number = 5
 load_dotenv()
 
 class GenerateTestForLesson(APIView):
-    # permission_classes = [AllowAny]
-
     def post(self, request, *args, **kwargs):
         try:
             lesson_id = request.data.get('lessonId')
@@ -41,80 +35,33 @@ class GenerateTestForLesson(APIView):
             # Удаляем старые тесты перед генерацией нового
             Test.objects.filter(lesson=lesson).delete()
 
-            lesson_title = lesson.title
-            lesson_content = lesson.content
-            module_title = lesson.module.title
-            module_description = lesson.module.description
-            course_title = lesson.module.course.title
-            course_description = lesson.module.course.description
+            # Создаём Test с флагом генерации
+            test = Test.objects.create(lesson=lesson, is_generating=True)
 
-            lesson_files = LessonFile.objects.filter(lesson=lesson)
-            if not lesson_files.exists():
-                return JsonResponse({"error": "No video files found for this lesson"}, status=404)
-
-            file_id = lesson_files.first().file_id
-            video_path = download_file_from_drive(file_id)
-            audio_path = extract_audio(video_path)
-            transcription = transcribe_with_vosk(audio_path)
-
-            os.remove(video_path)
-            os.remove(audio_path)
-
-            system_message = (
-                "You are an experienced teacher. Based on the provided educational material, "
-                "generate 5 multiple-choice quiz questions in JSON format. "
-                "Each question must have 4 answer options, where the first option is always correct. "
-                "Return only a valid JSON array of 5 objects. Each object must contain: "
-                "'question' (string), 'options' (a list of 4 strings), and 'correct_answer' (always 'A')."
-            )
-            user_message = (
-                f"Course: {course_title}\n"
-                f"Course Description: {course_description}\n\n"
-                f"Module: {module_title}\n"
-                f"Module Description: {module_description}\n\n"
-                f"Lesson: {lesson_title}\n"
-                f"Lesson Content: {lesson_content}\n\n"
-                f"Lesson Transcription: {transcription}\n\n"
-                f"Create 5 multiple-choice questions based on the transcription. "
-                f"Return only a valid JSON array in this format:\n"
-                f'[\n'
-                f'  {{"question": "...", "options": ["A", "B", "C", "D"], "correct_answer": "A"}},\n'
-                f'  ... (total 5 such objects) ...\n'
-                f']'
-            )
-
-            test_json = json.loads(call_openai_api(system_message, user_message))
-
-            # Создаём новый тест
-            test = Test.objects.create(lesson=lesson)
-
-            for q in test_json:
-                question_text = q.get("question")
-                options = q.get("options", [])
-                correct_index = 0  # 'A' — это первый вариант
-
-                if not question_text or len(options) != 4:
-                    continue
-
-                question = Question.objects.create(test=test, text=question_text)
-
-                for i, option_text in enumerate(options):
-                    Option.objects.create(
-                        question=question,
-                        text=option_text,
-                        is_correct=(i == correct_index)
-                    )
+            # Запускаем генерацию в фоне
+            Thread(target=generate_test_content, args=(lesson, test)).start()
 
             return JsonResponse({
-                "lesson_title": lesson_title,
                 "test_id": test.id,
-                "message": "Test generated and saved successfully."
+                "message": "Test start generating."
             })
 
         except Lesson.DoesNotExist:
             return JsonResponse({"error": "Lesson not found"}, status=404)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+
+
+class TestStatusView(APIView):
+    def get(self, request, test_id):
+        try:
+            test = Test.objects.get(id=test_id)
+            return JsonResponse({
+                "test_id": test.id,
+                "is_generating": test.is_generating
+            })
+        except Test.DoesNotExist:
+            return JsonResponse({"error": "Test not found"}, status=404)
 
 
 class TestDetailAPIView(APIView):

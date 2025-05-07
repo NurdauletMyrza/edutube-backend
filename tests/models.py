@@ -4,6 +4,7 @@ from courses.models import Lesson
 class Test(models.Model):
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_generating = models.BooleanField(default=False)
 
 class Question(models.Model):
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name='questions')

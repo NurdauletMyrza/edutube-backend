@@ -40,18 +40,10 @@ class TestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Test
-        fields = ['id', 'lesson', 'created_at', 'questions']
+        fields = ['id', 'lesson', 'created_at', 'is_generating', 'questions']
 
     def get_questions(self, obj):
         questions = list(obj.questions.all())
         random.shuffle(questions)
         request = self.context.get('request')
         return QuestionSerializer(questions, many=True, context={'request': request}).data
-
-
-# class TestSerializer(serializers.ModelSerializer):
-#     questions = QuestionSerializer(many=True, read_only=True)
-#
-#     class Meta:
-#         model = Test
-#         fields = ['id', 'lesson', 'created_at', 'questions']
