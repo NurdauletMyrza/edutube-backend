@@ -1,16 +1,7 @@
-import os
-import json
-import tempfile
 from threading import Thread
 
-import requests
-import subprocess
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
-from django.conf import settings
 from dotenv import load_dotenv
-from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -39,11 +30,11 @@ class GenerateTestForLesson(APIView):
             test = Test.objects.create(lesson=lesson, is_generating=True)
 
             # Запускаем генерацию в фоне
-            Thread(target=generate_test_content, args=(lesson, test)).start()
+            generate_test_content(lesson, test)
 
             return JsonResponse({
                 "test_id": test.id,
-                "message": "Test start generating."
+                "message": "Test already generated."
             })
 
         except Lesson.DoesNotExist:
@@ -52,14 +43,18 @@ class GenerateTestForLesson(APIView):
             return JsonResponse({"error": str(e)}, status=500)
 
 
-class TestStatusView(APIView):
-    def get(self, request, test_id):
+class LessonTestStatusView(APIView):
+    def get(self, request, lesson_id):
         try:
-            test = Test.objects.get(id=test_id)
+            lesson = Lesson.objects.get(pk=lesson_id)
+            test = Test.objects.get(lesson=lesson)
             return JsonResponse({
                 "test_id": test.id,
-                "is_generating": test.is_generating
+                "is_generating": test.is_generating,
+                "status": test.status,
             })
+        except Lesson.DoesNotExist:
+            return Response({'error': 'Lesson not found'}, status=status.HTTP_404_NOT_FOUND)
         except Test.DoesNotExist:
             return JsonResponse({"error": "Test not found"}, status=404)
 

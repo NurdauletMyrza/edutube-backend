@@ -5,6 +5,7 @@ class Test(models.Model):
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     is_generating = models.BooleanField(default=False)
+    status = models.CharField(max_length=255, default="Pending")
 
 class Question(models.Model):
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name='questions')

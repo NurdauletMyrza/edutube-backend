@@ -13,26 +13,37 @@ from .utils import (
 questions_number = 5
 
 def generate_test_content(lesson, test):
+    def update_status(text):
+        test.status = text
+        test.save(update_fields=["status"])
+
     try:
+        update_status("Collecting lesson data...")
         lesson_title = lesson.title
         lesson_content = lesson.content
         module = lesson.module
         course = module.course
 
+        update_status("Searching lesson video...")
         lesson_files = LessonFile.objects.filter(lesson=lesson)
         if not lesson_files.exists():
             test.is_generating = False
+            update_status("Lesson file does not exist...")
             test.save(update_fields=["is_generating"])
             return
 
         file_id = lesson_files.first().file_id
+        update_status("Downloading lesson video file...")
         video_path = download_file_from_drive(file_id)
+        update_status("Extracting audio from video...")
         audio_path = extract_audio(video_path)
+        update_status("Audio transcription...")
         transcription = transcribe_with_vosk(audio_path)
 
         os.remove(video_path)
         os.remove(audio_path)
 
+        update_status("Generating test with AI...")
         system_message = (
             "You are an experienced teacher. Based on the provided educational material, "
             f"generate {questions_number} multiple-choice quiz questions in JSON format. "
@@ -58,6 +69,7 @@ def generate_test_content(lesson, test):
 
         test_json = json.loads(call_openai_api(system_message, user_message))
 
+        update_status("Storing questions in database...")
         for q in test_json:
             question_text = q.get("question")
             options = q.get("options", [])
@@ -74,9 +86,11 @@ def generate_test_content(lesson, test):
                 )
 
         test.is_generating = False
-        test.save(update_fields=["is_generating"])
+        update_status("AI test is ready")
+        test.save(update_fields=["is_generating", "status"])
 
     except Exception as e:
         test.is_generating = False
-        test.save(update_fields=["is_generating"])
+        update_status(f"Error: {str(e)}")
+        test.save(update_fields=["is_generating", "status"])
         print(f"[ERROR while generating test #{test.id}] {e}")
