@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import CourseCreateView, CourseDetailView, AllCoursesView, UserCreatedCoursesView, ModuleCreateView, \
-    LessonCreateView, LessonDetailView, GetUploadURLView, SaveLessonFileView, DeleteLessonFileView, LessonFilesListView
+    LessonCreateView, LessonDetailView, GetUploadURLView, SaveLessonFileView, DeleteLessonFileView, LessonFilesListView, \
+    EnrollInCourse, EnrolledCourses, IsEnrolledInCourse
 
 urlpatterns = [
     path('course/create/', CourseCreateView.as_view(), name='course-create'),
@@ -15,6 +16,10 @@ urlpatterns = [
     path("file/save-file/", SaveLessonFileView.as_view(), name="save-lesson-file"),
     path("files/get-lesson-files/<int:lesson_id>/", LessonFilesListView.as_view(), name="get-lesson-files"),
     path("file/delete-lesson-file/<int:pk>/", DeleteLessonFileView.as_view(), name="delete-lesson-file"),
+
+    path('course/enroll/<int:course_id>/', EnrollInCourse.as_view(), name='enroll-in-course'),
+    path('user-enrolled/', EnrolledCourses.as_view(), name='enrolled-courses'),
+    path('is-enrolled-course/<int:course_id>/', IsEnrolledInCourse.as_view(), name='is-enrolled-course'),
 
     # path('courses/', CourseListCreateView.as_view(), name='course-list-create'),
     # path('courses/<int:pk>/', CourseDetailView.as_view(), name='course-detail'),

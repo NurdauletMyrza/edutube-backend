@@ -3,10 +3,11 @@ from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
 
 from utils.google_drive_service import get_drive_service
 
-from .models import Course, Module, Lesson, LessonFile
+from .models import Course, Module, Lesson, LessonFile, Enrollment
 from .serializers import CourseSerializer, ModuleSerializer, LessonSerializer, CourseDetailSerializer, LessonDetailSerializer, LessonFileSerializer
 
 from google.auth.transport.requests import AuthorizedSession
@@ -16,9 +17,37 @@ from googleapiclient.errors import HttpError
 
 import os
 
-# from googleapiclient.discovery import build
-# from googleapiclient.http import MediaIoBaseUpload
-# import io
+class IsEnrolledInCourse(APIView):
+    def get(self, request, course_id):
+        try:
+            course = Course.objects.get(pk=course_id)
+        except Course.DoesNotExist:
+            return Response({'error': 'Course not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        is_enrolled = Enrollment.objects.filter(user=request.user, course=course).exists()
+        return Response({'is_enrolled': is_enrolled})
+
+
+class EnrolledCourses(APIView):
+    def get(self, request):
+        enrollments = Enrollment.objects.filter(user=request.user).select_related('course')
+        courses = [enrollment.course for enrollment in enrollments]
+        serializer = CourseSerializer(courses, many=True)
+        return Response(serializer.data)
+
+
+class EnrollInCourse(APIView):
+    def post(self, request, course_id):
+        try:
+            course = Course.objects.get(id=course_id)
+            enrollment, created = Enrollment.objects.get_or_create(user=request.user, course=course)
+            if created:
+                return Response({"success": "Successfully enrolled"}, status=status.HTTP_201_CREATED)
+            else:
+                return Response({"message": "Already enrolled"}, status=status.HTTP_200_OK)
+
+        except Course.DoesNotExist:
+            return Response({"error": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class CourseCreateView(CreateAPIView):
